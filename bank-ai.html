@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Bank AI · Global Banking Assistant</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --pri:#0369A1;--sec:#0D9488;--accent:#F59E0B;--bg:#0F172A;--panel:#1E293B;--card:#334155;
+  --text:#F8FAFC;--muted:#94A3B8;--border:#475569;--glow:rgba(3,105,161,0.3);
+  --error:#EF4444;--success:#10B981
+}
+html,body{height:100%;background:var(--bg);overflow:hidden;font-family:system-ui,-apple-system,sans-serif}
+body{display:flex;flex-direction:column;align-items:center;padding:10px}
+
+/* AUTH */
+#authScreen{position:fixed;inset:0;background:linear-gradient(135deg,#0F172A,#1E293B);display:flex;align-items:center;justify-content:center;z-index:999;transition:opacity .4s ease,transform .4s ease}
+#authScreen.hidden{opacity:0;pointer-events:none;transform:scale(.95)}
+.auth-container{width:min(90vw,400px);padding:28px;border-radius:24px;background:var(--panel);border:2px solid var(--pri);box-shadow:0 0 40px var(--glow)}
+.auth-title{font-size:24px;font-weight:bold;color:var(--pri);text-align:center;margin-bottom:6px}
+.auth-subtitle{font-size:13px;color:var(--muted);text-align:center;margin-bottom:24px}
+.input-group{margin-bottom:16px}
+.input-group label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+.input-group input{width:100%;padding:14px 16px;border-radius:12px;border:2px solid var(--border);background:var(--card);color:var(--text);font-size:16px;outline:none;transition:border .2s,box-shadow .2s}
+.input-group input:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(3,105,161,.2)}
+.btn-primary{width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--pri),var(--sec));color:#fff;font-weight:bold;font-size:16px;cursor:pointer;transition:transform .15s,box-shadow .2s;margin-top:8px}
+.btn-primary:active{transform:scale(.97)}
+.otp-inputs{display:flex;gap:10px;justify-content:center;margin:20px 0}
+.otp-inputs input{width:50px;height:56px;text-align:center;font-size:24px;font-weight:bold;padding:0;border-radius:10px;border:2px solid var(--border);background:var(--card);color:var(--text);outline:none;transition:border .2s}
+.otp-inputs input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(245,158,11,.2)}
+.resend-otp{text-align:center;margin-top:12px;font-size:13px;color:var(--pri);cursor:pointer;text-decoration:underline}
+.resend-otp.disabled{color:var(--muted);cursor:not-allowed;text-decoration:none}
+.auth-note{margin-top:16px;font-size:12px;color:var(--muted);text-align:center;line-height:1.5}
+.error-text{color:var(--error);font-size:13px;margin-top:8px;min-height:20px;text-align:center}
+.success-text{color:var(--success);font-size:13px;margin-top:8px;text-align:center}
+
+/* MAIN APP */
+.top-bar{width:min(100vw - 20px,420px);display:flex;align-items:center;margin-bottom:8px}
+.user-email{font-size:12px;color:var(--muted);margin-right:auto}
+.btn-logout{background:linear-gradient(135deg,#DC2626,#B91C1C);color:#fff;padding:8px 12px;border-radius:20px;font-size:12px;border:none;cursor:pointer;font-weight:bold}
+header{color:var(--pri);font:bold 18px system-ui;text-align:center;padding:8px 0;letter-spacing:.5px}
+#statusBar{width:min(100vw - 20px,420px);padding:8px 12px;border-radius:12px;text-align:center;font-size:13px;margin-bottom:8px;background:var(--panel);border:1px solid var(--border);color:var(--muted);display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+#bankBrowser{width:min(100vw - 20px,420px);height:260px;background:var(--panel);border-radius:16px;border:2px solid var(--pri);position:relative;overflow:hidden;display:flex;flex-direction:column}
+#bankHeader{padding:8px 12px;background:linear-gradient(135deg,var(--pri),var(--sec));color:#fff;display:flex;justify-content:space-between;align-items:center;font-weight:bold;font-size:13px;gap:8px}
+#bankSearch{padding:6px 12px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:20px;outline:none;width:55%;font-size:13px}
+#bankSearch::placeholder{color:rgba(255,255,255,0.6)}
+#bankList{flex:1;overflow-y:auto;padding:6px}
+#bankList::-webkit-scrollbar{width:4px}
+#bankList::-webkit-scrollbar-track{background:var(--panel)}
+#bankList::-webkit-scrollbar-thumb{background:var(--pri);border-radius:2px}
+.bank-item{padding:8px 12px;margin:3px 0;background:var(--card);border-radius:8px;border-left:3px solid var(--sec);cursor:pointer;transition:all .2s ease}
+.bank-item:hover{background:rgba(3,105,161,0.18);border-left-color:var(--pri);padding-left:16px}
+.bank-item.active{background:rgba(3,105,161,0.28);border-left-color:var(--accent);box-shadow:0 0 8px var(--glow)}
+.bank-name{font-size:13px;font-weight:600;color:var(--text)}
+.bank-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.bank-url{font-size:10px;color:var(--sec);margin-top:1px}
+#resultPanel{width:min(100vw - 20px,420px);padding:12px 14px;border-radius:12px;margin:6px 0;background:var(--panel);border:1px solid var(--border);min-height:70px;max-height:160px;overflow-y:auto}
+#resultPanel::-webkit-scrollbar{width:4px}
+#resultPanel::-webkit-scrollbar-thumb{background:var(--pri);border-radius:2px}
+#resultTitle{font-weight:bold;margin-bottom:5px;color:var(--pri);font-size:14px}
+#resultText{font-size:13px;line-height:1.7;color:var(--text);white-space:pre-wrap}
+#inputArea{width:min(100vw - 20px,420px);padding:4px 0;display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+#query{flex:1 1 160px;padding:11px 16px;border-radius:28px;border:2px solid var(--pri);background:var(--card);color:var(--text);font-size:15px;outline:none}
+#query:focus{border-color:#38BDF8;box-shadow:0 0 10px var(--glow)}
+button{padding:11px 13px;border-radius:28px;border:none;font-weight:bold;cursor:pointer;transition:transform .15s;font-size:12px}
+button:active{transform:scale(.95)}
+#sendBtn{background:linear-gradient(135deg,var(--pri),var(--sec));color:#fff}
+.btn-open{background:linear-gradient(135deg,#10B981,#059669);color:#fff}
+.btn-all{background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff}
+.btn-clear{background:linear-gradient(135deg,#6B7280,#4B5563);color:#fff}
+#emotionIcon{font-size:16px}
+#debugInfo{position:fixed;bottom:6px;left:6px;color:#64748B;font-size:10px;background:rgba(15,23,42,.9);padding:4px 8px;border-radius:6px;max-width:300px}
+.bank-count{font-size:11px;color:var(--muted)}
+.tab-bar{width:min(100vw - 20px,420px);display:flex;gap:4px;margin-bottom:6px}
+.tab{flex:1;padding:6px;border-radius:8px;text-align:center;font-size:11px;font-weight:bold;cursor:pointer;background:var(--card);color:var(--muted);border:1px solid var(--border);transition:all .2s}
+.tab.active{background:var(--pri);color:#fff;border-color:var(--pri)}
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="authScreen">
+  <div class="auth-container">
+    <div id="loginForm">
+      <h1 class="auth-title">🏦 Bank AI</h1>
+      <p class="auth-subtitle">Global Banking Assistant — Secure Access</p>
+      <div class="input-group">
+        <label>📧 Email Address</label>
+        <input type="email" id="loginEmail" placeholder="your@email.com" autocomplete="email">
+      </div>
+      <div class="input-group">
+        <label>🔒 Password</label>
+        <input type="password" id="loginPassword" placeholder="Enter your password" autocomplete="current-password">
+      </div>
+      <button class="btn-primary" id="sendOtpBtn">📧 SEND VERIFICATION CODE</button>
+      <div class="error-text" id="loginError"></div>
+      <p class="auth-note">🔒 Encrypted & secure. We never share your credentials.</p>
+    </div>
+    <div id="otpForm" style="display:none">
+      <h1 class="auth-title">🔐 Verify Identity</h1>
+      <p class="auth-subtitle">6-digit code sent to <strong id="otpEmailDisplay"></strong></p>
+      <div class="otp-inputs">
+        <input type="text" maxlength="1" inputmode="numeric" class="otp-box" data-index="0">
+        <input type="text" maxlength="1" inputmode="numeric" class="otp-box" data-index="1">
+        <input type="text" maxlength="1" inputmode="numeric" class="otp-box" data-index="2">
+        <input type="text" maxlength="1" inputmode="numeric" class="otp-box" data-index="3">
+        <input type="text" maxlength="1" inputmode="numeric" class="otp-box" data-index="4">
+        <input type="text" maxlength="1" inputmode="numeric" class="otp-box" data-index="5">
+      </div>
+      <button class="btn-primary" id="verifyOtpBtn">✅ VERIFY & SIGN IN</button>
+      <div class="resend-otp" id="resendOtpBtn">📧 Resend Code</div>
+      <div class="error-text" id="otpError"></div>
+      <div class="success-text" id="otpSuccess"></div>
+      <p class="auth-note">⚠️ Code expires in 5 minutes.</p>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="mainApp" style="display:none;width:100%;max-width:440px">
+  <div class="top-bar">
+    <header>🏦 Bank AI · Global Banking Assistant</header>
+  </div>
+  <div class="top-bar">
+    <span class="user-email" id="userDisplay"></span>
+    <button class="btn-logout" id="logoutBtn">🚪 Logout</button>
+  </div>
+  <div id="statusBar">
+    <span id="emotionIcon">🤍</span>
+    <span id="statusText">Initializing...</span>
+    <span class="bank-count" id="bankCount"></span>
+  </div>
+  <div class="tab-bar" id="regionTabs"></div>
+  <div id="bankBrowser">
+    <div id="bankHeader">
+      <span>🌍 Verified Bank Directory</span>
+      <input type="text" id="bankSearch" placeholder="Search banks or country...">
+    </div>
+    <div id="bankList"></div>
+  </div>
+  <div id="resultPanel">
+    <div id="resultTitle">System Ready</div>
+    <div id="resultText">✅ All links are verified official bank websites.
+
+• Tap any bank → tap 🔗 OPEN → opens in new tab
+• Ask about accounts, loans, savings, rates, KYC
+• Use tabs above to filter by region
+• Type a country or bank name to search
+
+⚠️ Always verify the URL in your browser's address bar before entering credentials.</div>
+  </div>
+  <div id="inputArea">
+    <input type="text" id="query" placeholder="Ask about banking or search banks...">
+    <button id="btnOpen" class="btn-open">🔗 OPEN</button>
+    <button id="btnAll" class="btn-all">🌐 ALL</button>
+    <button id="btnClear" class="btn-clear">✕</button>
+    <button id="sendBtn">SEND</button>
+  </div>
+  <div id="debugInfo">Banks: — | Filter: — | Mood: —</div>
+</div>
+
+<script>
+// ============================================================
+// AUTH
+// ============================================================
+let currentUser = null, generatedOTP = null, otpEmail = "", otpExpiry = null, resendCooldown = false;
+
+function isValidEmail(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+function showLoginError(m){ document.getElementById('loginError').textContent = "❌ " + m; }
+function showOtpError(m){ document.getElementById('otpError').textContent = "❌ " + m; document.getElementById('otpSuccess').textContent = ""; }
+function showOtpSuccess(m){ document.getElementById('otpSuccess').textContent = "✅ " + m; document.getElementById('otpError').textContent = ""; }
+
+function sendOTP(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if(!email || !password) return showLoginError("Enter both email and password.");
+  if(!isValidEmail(email)) return showLoginError("Enter a valid email address.");
+  if(password.length < 6) return showLoginError("Password must be at least 6 characters.");
+  generatedOTP = String(Math.floor(100000 + Math.random() * 900000));
+  otpEmail = email;
+  otpExpiry = Date.now() + 5 * 60 * 1000;
+  console.log("📧 OTP for", email, ":", generatedOTP);
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('otpForm').style.display = 'block';
+  document.getElementById('otpEmailDisplay').textContent = email;
+  showOtpSuccess("Verification code sent! (Check console for demo code)");
+  document.querySelector('.otp-box[data-index="0"]').focus();
+  startResendCooldown();
+}
+
+function startResendCooldown(){
+  resendCooldown = true;
+  const btn = document.getElementById('resendOtpBtn');
+  btn.classList.add('disabled');
+  let t = 60;
+  btn.textContent = "⏱️ Resend in " + t + "s";
+  const timer = setInterval(() => {
+    t--;
+    btn.textContent = "⏱️ Resend in " + t + "s";
+    if(t <= 0){ clearInterval(timer); resendCooldown = false; btn.classList.remove('disabled'); btn.textContent = "📧 Resend Code"; }
+  }, 1000);
+}
+
+function resendOTP(){
+  if(resendCooldown) return;
+  generatedOTP = String(Math.floor(100000 + Math.random() * 900000));
+  otpExpiry = Date.now() + 5 * 60 * 1000;
+  console.log("📧 New OTP for", otpEmail, ":", generatedOTP);
+  showOtpSuccess("New code sent! (Check console for demo code)");
+  startResendCooldown();
+  document.querySelector('.otp-box[data-index="0"]').focus();
+}
+
+function getOtpValue(){
+  let code = "";
+  document.querySelectorAll('.otp-box').forEach(b => code += b.value || "");
+  return code;
+}
+
+function verifyOTP(){
+  const code = getOtpValue();
+  if(code.length !== 6) return showOtpError("Enter all 6 digits.");
+  if(Date.now() > otpExpiry) return showOtpError("Code expired. Request a new one.");
+  if(code !== generatedOTP) return showOtpError("Invalid code. Try again.");
+  currentUser = { email: otpEmail, loggedInAt: new Date().toISOString() };
+  try { localStorage.setItem('bankAI_user', JSON.stringify(currentUser)); } catch(e){}
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('mainApp').style.display = 'block';
+  document.getElementById('userDisplay').textContent = otpEmail;
+  initAll();
+  speakText("Welcome to Bank AI. Ready to assist you.");
+}
+
+function logout(){
+  currentUser = null;
+  try { localStorage.removeItem('bankAI_user'); } catch(e){}
+  generatedOTP = null; otpEmail = "";
+  document.getElementById('loginEmail').value = "";
+  document.getElementById('loginPassword').value = "";
+  document.getElementById('loginError').textContent = "";
+  document.querySelectorAll('.otp-box').forEach(b => b.value = "");
+  document.getElementById('otpError').textContent = "";
+  document.getElementById('otpSuccess').textContent = "";
+  document.getElementById('loginForm').style.display = 'block';
+  document.getElementById('otpForm').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('authScreen').classList.remove('hidden');
+}
+
+document.querySelectorAll('.otp-box').forEach((box, idx, boxes) => {
+  box.addEventListener('input', () => { if(box.value && idx < 5) boxes[idx + 1].focus(); });
+  box.addEventListener('keydown', e => { if(e.key === 'Backspace' && !box.value && idx > 0) boxes[idx - 1].focus(); });
+});
+
+function checkSavedSession(){
+  try {
+    const saved = localStorage.getItem('bankAI_user');
+    if(saved){
+      currentUser = JSON.parse(saved);
+      document.getElementById('authScreen').classList.add('hidden');
+      document.getElementById('mainApp').style.display = 'block';
+      document.getElementById('userDisplay').textContent = currentUser.email;
+      initAll();
+      return true;
+    }
+  } catch(e){}
+  return false;
+}
+
+// ============================================================
+// BANK DATABASE
+// ============================================================
+let banksDB = [], filteredBanks = [], selectedBank = null, activeRegion = "All";
+
+function buildBanksDatabase(){
+  banksDB = [
+    // === PHILIPPINES ===
+    {id:1,name:"BSP — Bangko Sentral ng Pilipinas",flag:"🇵🇭",country:"Philippines",region:"Asia",type:"Central Bank",url:"https://www.bsp.gov.ph"},
+    {id:2,name:"BDO — Banco de Oro",flag:"🇵🇭",country:"Philippines",region:"Asia",type:"Commercial",url:"https://www.bdo.com.ph"},
+    {id:3,name:"Metrobank",flag:"🇵🇭",country:"Philippines",region:"Asia",type:"Commercial",url:"https://www.metrobank.com.ph"},
+    {id:4,name:"BPI — Bank of the Philippine Islands",flag:"🇵🇭",country:"Philippines",region:"Asia",type:"Commercial",url:"https://www.bpi.com.ph"},
+    {id:5,name:"Landbank of the Philippines",flag:"🇵🇭",country:"Philippines",region:"Asia",type:"Government",url:"https://www.landbank.com.ph"},
+    {id:6,name:"UnionBank Philippines",flag:"🇵🇭",country:"Philippines",region:"Asia",type:"Commercial",url:"https://www.unionbankph.com"},
+    {id:7,name:"PNB — Philippine National Bank",flag:"🇵🇭",country:"Philippines",region:"Asia",type:"Commercial",url:"https://www.pnb.com.ph"},
+    {id:8,name:"Security Bank Philippines",flag:"🇵🇭",country:"Philippines",region:"Asia",type:"Commercial",url:"https://www.securitybank.com"},
+    {id:9,name:"RCBC — Rizal Commercial Banking Corp",flag:"🇵🇭",country:"Philippines",region:"Asia",type:"Commercial",url:"https://www.rcbc.com"},
+    {id:10,name:"Chinabank Philippines",flag:"🇵🇭",country:"Philippines",region:"Asia",type:"Commercial",url:"https://www.chinabank.ph"},
+    {id:11,name:"DBP — Development Bank of the Philippines",flag:"🇵🇭",country:"Philippines",region:"Asia",type:"Government",url:"https://www.dbp.ph"},
+    {id:12,name:"AUB — Asia United Bank",flag:"🇵🇭",country:"Philippines",region:"Asia",type:"Commercial",url:"https://www.aub.com.ph"},
+    {id:13,name:"GCash — Globe Fintech",flag:"🇵🇭",country:"Philippines",region:"Asia",type:"Fintech",url:"https://www.gcash.com"},
+    {id:14,name:"Maya — PayMaya Philippines",flag:"🇵🇭",country:"Philippines",region:"Asia",type:"Fintech",url:"https://www.maya.ph"},
+    {id:15,name:"CIMB Bank Philippines",flag:"🇵🇭",country:"Philippines",region:"Asia",type:"Digital",url:"https://www.cimbbank.com.ph"},
+    {id:16,name:"EastWest Bank Philippines",flag:"🇵🇭",country:"Philippines",region:"Asia",type:"Commercial",url:"https://www.eastwestbanker.com"},
+    {id:17,name:"Robinsons Bank",flag:"🇵🇭",country:"Philippines",region:"Asia",type:"Commercial",url:"https://www.robinsonsbank.com.ph"},
+    {id:18,name:"PBCOM — Philippine Bank of Communications",flag:"🇵🇭",country:"Philippines",region:"Asia",type:"Commercial",url:"https://www.pbcom.com.ph"},
+    {id:19,name:"Seabank Philippines",flag:"🇵🇭",country:"Philippines",region:"Asia",type:"Digital",url:"https://www.seabank.com.ph"},
+    {id:20,name:"Tonik Digital Bank",flag:"🇵🇭",country:"Philippines",region:"Asia",type:"Digital",url:"https://www.tonikbank.com"},
+    // === USA ===
+    {id:21,name:"Federal Reserve System",flag:"🇺🇸",country:"USA",region:"Americas",type:"Central Bank",url:"https://www.federalreserve.gov"},
+    {id:22,name:"JPMorgan Chase",flag:"🇺🇸",country:"USA",region:"Americas",type:"Commercial",url:"https://www.jpmorganchase.com"},
+    {id:23,name:"Bank of America",flag:"🇺🇸",country:"USA",region:"Americas",type:"Commercial",url:"https://www.bankofamerica.com"},
+    {id:24,name:"Wells Fargo",flag:"🇺🇸",country:"USA",region:"Americas",type:"Commercial",url:"https://www.wellsfargo.com"},
+    {id:25,name:"Citibank",flag:"🇺🇸",country:"USA",region:"Americas",type:"Commercial",url:"https://www.citi.com"},
+    {id:26,name:"Goldman Sachs",flag:"🇺🇸",country:"USA",region:"Americas",type:"Investment",url:"https://www.goldmansachs.com"},
+    {id:27,name:"Morgan Stanley",flag:"🇺🇸",country:"USA",region:"Americas",type:"Investment",url:"https://www.morganstanley.com"},
+    {id:28,name:"US Bank",flag:"🇺🇸",country:"USA",region:"Americas",type:"Commercial",url:"https://www.usbank.com"},
+    {id:29,name:"PNC Bank",flag:"🇺🇸",country:"USA",region:"Americas",type:"Commercial",url:"https://www.pnc.com"},
+    {id:30,name:"TD Bank USA",flag:"🇺🇸",country:"USA",region:"Americas",type:"Commercial",url:"https://www.td.com/us/en"},
+    {id:31,name:"Capital One",flag:"🇺🇸",country:"USA",region:"Americas",type:"Commercial",url:"https://www.capitalone.com"},
+    {id:32,name:"Charles Schwab Bank",flag:"🇺🇸",country:"USA",region:"Americas",type:"Investment",url:"https://www.schwab.com"},
+    {id:33,name:"Ally Bank",flag:"🇺🇸",country:"USA",region:"Americas",type:"Digital",url:"https://www.ally.com"},
+    {id:34,name:"American Express",flag:"🇺🇸",country:"USA",region:"Americas",type:"Commercial",url:"https://www.americanexpress.com"},
+    {id:35,name:"Discover Bank",flag:"🇺🇸",country:"USA",region:"Americas",type:"Commercial",url:"https://www.discover.com"},
+    // === UK ===
+    {id:36,name:"Bank of England",flag:"🇬🇧",country:"UK",region:"Europe",type:"Central Bank",url:"https://www.bankofengland.co.uk"},
+    {id:37,name:"HSBC UK",flag:"🇬🇧",country:"UK",region:"Europe",type:"Commercial",url:"https://www.hsbc.co.uk"},
+    {id:38,name:"Barclays",flag:"🇬🇧",country:"UK",region:"Europe",type:"Commercial",url:"https://www.barclays.co.uk"},
+    {id:39,name:"Lloyds Bank",flag:"🇬🇧",country:"UK",region:"Europe",type:"Commercial",url:"https://www.lloydsbank.com"},
+    {id:40,name:"NatWest",flag:"🇬🇧",country:"UK",region:"Europe",type:"Commercial",url:"https://www.natwest.com"},
+    {id:41,name:"Standard Chartered UK",flag:"🇬🇧",country:"UK",region:"Europe",type:"Commercial",url:"https://www.sc.com/uk"},
+    {id:42,name:"Santander UK",flag:"🇬🇧",country:"UK",region:"Europe",type:"Commercial",url:"https://www.santander.co.uk"},
+    {id:43,name:"Monzo Bank",flag:"🇬🇧",country:"UK",region:"Europe",type:"Digital",url:"https://www.monzo.com"},
+    {id:44,name:"Starling Bank",flag:"🇬🇧",country:"UK",region:"Europe",type:"Digital",url:"https://www.starlingbank.com"},
+    {id:45,name:"Revolut UK",flag:"🇬🇧",country:"UK",region:"Europe",type:"Fintech",url:"https://www.revolut.com"},
+    // === EUROPE ===
+    {id:46,name:"ECB — European Central Bank",flag:"🇪🇺",country:"EU",region:"Europe",type:"Central Bank",url:"https://www.ecb.europa.eu"},
+    {id:47,name:"Deutsche Bank",flag:"🇩🇪",country:"Germany",region:"Europe",type:"Commercial",url:"https://www.db.com"},
+    {id:48,name:"Commerzbank",flag:"🇩🇪",country:"Germany",region:"Europe",type:"Commercial",url:"https://www.commerzbank.com"},
+    {id:49,name:"BNP Paribas",flag:"🇫🇷",country:"France",region:"Europe",type:"Commercial",url:"https://www.bnpparibas.com"},
+    {id:50,name:"Société Générale",flag:"🇫🇷",country:"France",region:"Europe",type:"Commercial",url:"https://www.societegenerale.com"},
+    {id:51,name:"Crédit Agricole",flag:"🇫🇷",country:"France",region:"Europe",type:"Commercial",url:"https://www.credit-agricole.com"},
+    {id:52,name:"ING Bank",flag:"🇳🇱",country:"Netherlands",region:"Europe",type:"Commercial",url:"https://www.ing.com"},
+    {id:53,name:"ABN AMRO",flag:"🇳🇱",country:"Netherlands",region:"Europe",type:"Commercial",url:"https://www.abnamro.com"},
+    {id:54,name:"UniCredit",flag:"🇮🇹",country:"Italy",region:"Europe",type:"Commercial",url:"https://www.unicredit.eu"},
+    {id:55,name:"Intesa Sanpaolo",flag:"🇮🇹",country:"Italy",region:"Europe",type:"Commercial",url:"https://www.intesasanpaolo.com"},
+    {id:56,name:"Banco Santander",flag:"🇪🇸",country:"Spain",region:"Europe",type:"Commercial",url:"https://www.santander.com"},
+    {id:57,name:"BBVA Spain",flag:"🇪🇸",country:"Spain",region:"Europe",type:"Commercial",url:"https://www.bbva.com"},
+    {id:58,name:"UBS Switzerland",flag:"🇨🇭",country:"Switzerland",region:"Europe",type:"Investment",url:"https://www.ubs.com"},
+    {id:59,name:"PostFinance Switzerland",flag:"🇨🇭",country:"Switzerland",region:"Europe",type:"Commercial",url:"https://www.postfinance.ch"},
+    {id:60,name:"Nordea",flag:"🇸🇪",country:"Sweden",region:"Europe",type:"Commercial",url:"https://www.nordea.com"},
+    {id:61,name:"SEB — Skandinaviska Enskilda Banken",flag:"🇸🇪",country:"Sweden",region:"Europe",type:"Commercial",url:"https://sebgroup.com"},
+    {id:62,name:"DNB Bank Norway",flag:"🇳🇴",country:"Norway",region:"Europe",type:"Commercial",url:"https://www.dnb.no"},
+    {id:63,name:"OP Financial Group Finland",flag:"🇫🇮",country:"Finland",region:"Europe",type:"Commercial",url:"https://www.op.fi"},
+    {id:64,name:"PKO Bank Polski",flag:"🇵🇱",country:"Poland",region:"Europe",type:"Commercial",url:"https://www.pkobp.pl"},
+    {id:65,name:"Raiffeisen Bank International",flag:"🇦🇹",country:"Austria",region:"Europe",type:"Commercial",url:"https://www.rbinternational.com"},
+    // === ASIA ===
+    {id:66,name:"MAS — Monetary Authority of Singapore",flag:"🇸🇬",country:"Singapore",region:"Asia",type:"Central Bank",url:"https://www.mas.gov.sg"},
+    {id:67,name:"DBS Bank",flag:"🇸🇬",country:"Singapore",region:"Asia",type:"Commercial",url:"https://www.dbs.com.sg"},
+    {id:68,name:"OCBC Bank",flag:"🇸🇬",country:"Singapore",region:"Asia",type:"Commercial",url:"https://www.ocbc.com"},
+    {id:69,name:"UOB — United Overseas Bank",flag:"🇸🇬",country:"Singapore",region:"Asia",type:"Commercial",url:"https://www.uob.com.sg"},
+    {id:70,name:"Bank of Japan",flag:"🇯🇵",country:"Japan",region:"Asia",type:"Central Bank",url:"https://www.boj.or.jp"},
+    {id:71,name:"MUFG — Mitsubishi UFJ Financial Group",flag:"🇯🇵",country:"Japan",region:"Asia",type:"Commercial",url:"https://www.mufg.jp"},
+    {id:72,name:"SMBC — Sumitomo Mitsui Banking",flag:"🇯🇵",country:"Japan",region:"Asia",type:"Commercial",url:"https://www.smbc.co.jp"},
+    {id:73,name:"Mizuho Financial Group",flag:"🇯🇵",country:"Japan",region:"Asia",type:"Commercial",url:"https://www.mizuhogroup.com"},
+    {id:74,name:"People's Bank of China",flag:"🇨🇳",country:"China",region:"Asia",type:"Central Bank",url:"https://www.pbc.gov.cn"},
+    {id:75,name:"ICBC — Industrial and Commercial Bank of China",flag:"🇨🇳",country:"China",region:"Asia",type:"Commercial",url:"https://www.icbc.com.cn"},
+    {id:76,name:"China Construction Bank",flag:"🇨🇳",country:"China",region:"Asia",type:"Commercial",url:"https://www.ccb.com"},
+    {id:77,name:"Agricultural Bank of China",flag:"🇨🇳",country:"China",region:"Asia",type:"Commercial",url:"https://www.abchina.com"},
+    {id:78,name:"Bank of China",flag:"🇨🇳",country:"China",region:"Asia",type:"Commercial",url:"https://www.boc.cn"},
+    {id:79,name:"Reserve Bank of India",flag:"🇮🇳",country:"India",region:"Asia",type:"Central Bank",url:"https://www.rbi.org.in"},
+    {id:80,name:"SBI — State Bank of India",flag:"🇮🇳",country:"India",region:"Asia",type:"Government",url:"https://www.onlinesbi.sbi"},
+    {id:81,name:"HDFC Bank India",flag:"🇮🇳",country:"India",region:"Asia",type:"Commercial",url:"https://www.hdfcbank.com"},
+    {id:82,name:"ICICI Bank India",flag:"🇮🇳",country:"India",region:"Asia",type:"Commercial",url:"https://www.icicibank.com"},
+    {id:83,name:"Axis Bank India",flag:"🇮🇳",country:"India",region:"Asia",type:"Commercial",url:"https://www.axisbank.com"},
+    {id:84,name:"Kotak Mahindra Bank",flag:"🇮🇳",country:"India",region:"Asia",type:"Commercial",url:"https://www.kotak.com"},
+    {id:85,name:"Bank of Korea",flag:"🇰🇷",country:"South Korea",region:"Asia",type:"Central Bank",url:"https://www.bok.or.kr"},
+    {id:86,name:"KB Kookmin Bank",flag:"🇰🇷",country:"South Korea",region:"Asia",type:"Commercial",url:"https://www.kbstar.com"},
+    {id:87,name:"Shinhan Bank",flag:"🇰🇷",country:"South Korea",region:"Asia",type:"Commercial",url:"https://www.shinhan.com"},
+    {id:88,name:"Bank of Thailand",flag:"🇹🇭",country:"Thailand",region:"Asia",type:"Central Bank",url:"https://www.bot.or.th"},
+    {id:89,name:"SCB — Siam Commercial Bank",flag:"🇹🇭",country:"Thailand",region:"Asia",type:"Commercial",url:"https://www.scb.co.th"},
+    {id:90,name:"Bangkok Bank",flag:"🇹🇭",country:"Thailand",region:"Asia",type:"Commercial",url:"https://www.bangkokbank.com"},
+    {id:91,name:"Bank Indonesia",flag:"🇮🇩",country:"Indonesia",region:"Asia",type:"Central Bank",url:"https://www.bi.go.id"},
+    {id:92,name:"Bank Mandiri",flag:"🇮🇩",country:"Indonesia",region:"Asia",type:"Government",url:"https://www.bankmandiri.co.id"},
+    {id:93,name:"BCA — Bank Central Asia",flag:"🇮🇩",country:"Indonesia",region:"Asia",type:"Commercial",url:"https://www.bca.co.id"},
+    {id:94,name:"BNI — Bank Negara Indonesia",flag:"🇮🇩",country:"Indonesia",region:"Asia",type:"Government",url:"https://www.bni.co.id"},
+    {id:95,name:"Bank Negara Malaysia",flag:"🇲🇾",country:"Malaysia",region:"Asia",type:"Central Bank",url:"https://www.bnm.gov.my"},
+    {id:96,name:"Maybank",flag:"🇲🇾",country:"Malaysia",region:"Asia",type:"Commercial",url:"https://www.maybank.com"},
+    {id:97,name:"CIMB Bank Malaysia",flag:"🇲🇾",country:"Malaysia",region:"Asia",type:"Commercial",url:"https://www.cimb.com.my"},
+    {id:98,name:"Public Bank Malaysia",flag:"🇲🇾",country:"Malaysia",region:"Asia",type:"Commercial",url:"https://www.pbebank.com"},
+    {id:99,name:"Vietcombank",flag:"🇻🇳",country:"Vietnam",region:"Asia",type:"Commercial",url:"https://www.vietcombank.com.vn"},
+    {id:100,name:"VietinBank",flag:"🇻🇳",country:"Vietnam",region:"Asia",type:"Government",url:"https://www.vietinbank.vn"},
+    {id:101,name:"State Bank of Pakistan",flag:"🇵🇰",country:"Pakistan",region:"Asia",type:"Central Bank",url:"https://www.sbp.org.pk"},
+    {id:102,name:"Habib Bank Limited Pakistan",flag:"🇵🇰",country:"Pakistan",region:"Asia",type:"Commercial",url:"https://www.hbl.com"},
+    {id:103,name:"Bangladesh Bank",flag:"🇧🇩",country:"Bangladesh",region:"Asia",type:"Central Bank",url:"https://www.bb.org.bd"},
+    {id:104,name:"bKash Bangladesh",flag:"🇧🇩",country:"Bangladesh",region:"Asia",type:"Fintech",url:"https://www.bkash.com"},
+    {id:105,name:"Central Bank of Sri Lanka",flag:"🇱🇰",country:"Sri Lanka",region:"Asia",type:"Central Bank",url:"https://www.cbsl.gov.lk"},
+    // === MIDDLE EAST ===
+    {id:106,name:"Saudi Central Bank — SAMA",flag:"🇸🇦",country:"Saudi Arabia",region:"Middle East",type:"Central Bank",url:"https://www.sama.gov.sa"},
+    {id:107,name:"Al Rajhi Bank",flag:"🇸🇦",country:"Saudi Arabia",region:"Middle East",type:"Islamic",url:"https://www.alrajhibank.com.sa"},
+    {id:108,name:"Saudi National Bank",flag:"🇸🇦",country:"Saudi Arabia",region:"Middle East",type:"Commercial",url:"https://www.alahli.com"},
+    {id:109,name:"Central Bank of UAE",flag:"🇦🇪",country:"UAE",region:"Middle East",type:"Central Bank",url:"https://www.centralbank.ae"},
+    {id:110,name:"Emirates NBD",flag:"🇦🇪",country:"UAE",region:"Middle East",type:"Commercial",url:"https://www.emiratesnbd.com"},
+    {id:111,name:"Abu Dhabi Commercial Bank",flag:"🇦🇪",country:"UAE",region:"Middle East",type:"Commercial",url:"https://www.adcb.com"},
+    {id:112,name:"FAB — First Abu Dhabi Bank",flag:"🇦🇪",country:"UAE",region:"Middle East",type:"Commercial",url:"https://www.bankfab.com"},
+    {id:113,name:"Central Bank of Kuwait",flag:"🇰🇼",country:"Kuwait",region:"Middle East",type:"Central Bank",url:"https://www.cbk.gov.kw"},
+    {id:114,name:"National Bank of Kuwait",flag:"🇰🇼",country:"Kuwait",region:"Middle East",type:"Commercial",url:"https://www.nbk.com"},
+    {id:115,name:"Qatar Central Bank",flag:"🇶🇦",country:"Qatar",region:"Middle East",type:"Central Bank",url:"https://www.qcb.gov.qa"},
+    {id:116,name:"QNB — Qatar National Bank",flag:"🇶🇦",country:"Qatar",region:"Middle East",type:"Commercial",url:"https://www.qnb.com"},
+    {id:117,name:"Bank of Israel",flag:"🇮🇱",country:"Israel",region:"Middle East",type:"Central Bank",url:"https://www.boi.org.il"},
+    // === AFRICA ===
+    {id:118,name:"Central Bank of Nigeria",flag:"🇳🇬",country:"Nigeria",region:"Africa",type:"Central Bank",url:"https://www.cbn.gov.ng"},
+    {id:119,name:"GTBank — Guaranty Trust Bank",flag:"🇳🇬",country:"Nigeria",region:"Africa",type:"Commercial",url:"https://www.gtbank.com"},
+    {id:120,name:"Zenith Bank Nigeria",flag:"🇳🇬",country:"Nigeria",region:"Africa",type:"Commercial",url:"https://www.zenithbank.com"},
+    {id:121,name:"South African Reserve Bank",flag:"🇿🇦",country:"South Africa",region:"Africa",type:"Central Bank",url:"https://www.resbank.co.za"},
+    {id:122,name:"Standard Bank South Africa",flag:"🇿🇦",country:"South Africa",region:"Africa",type:"Commercial",url:"https://www.standardbank.co.za"},
+    {id:123,name:"FNB — First National Bank South Africa",flag:"🇿🇦",country:"South Africa",region:"Africa",type:"Commercial",url:"https://www.fnb.co.za"},
+    {id:124,name:"Nedbank South Africa",flag:"🇿🇦",country:"South Africa",region:"Africa",type:"Commercial",url:"https://www.nedbank.co.za"},
+    {id:125,name:"Central Bank of Egypt",flag:"🇪🇬",country:"Egypt",region:"Africa",type:"Central Bank",url:"https://www.cbe.org.eg"},
+    {id:126,name:"CIB — Commercial International Bank Egypt",flag:"🇪🇬",country:"Egypt",region:"Africa",type:"Commercial",url:"https://www.cibeg.com"},
+    {id:127,name:"Central Bank of Kenya",flag:"🇰🇪",country:"Kenya",region:"Africa",type:"Central Bank",url:"https://www.centralbank.go.ke"},
+    {id:128,name:"Equity Bank Kenya",flag:"🇰🇪",country:"Kenya",region:"Africa",type:"Commercial",url:"https://www.equitybank.co.ke"},
+    {id:129,name:"M-Pesa — Safaricom",flag:"🇰🇪",country:"Kenya",region:"Africa",type:"Fintech",url:"https://www.safaricom.co.ke/personal/m-pesa"},
+    {id:130,name:"Attijariwafa Bank Morocco",flag:"🇲🇦",country:"Morocco",region:"Africa",type:"Commercial",url:"https://www.attijariwafabank.com"},
+    // === AMERICAS ===
+    {id:131,name:"Bank of Canada",flag:"🇨🇦",country:"Canada",region:"Americas",type:"Central Bank",url:"https://www.bankofcanada.ca"},
+    {id:132,name:"RBC — Royal Bank of Canada",flag:"🇨🇦",country:"Canada",region:"Americas",type:"Commercial",url:"https://www.rbc.com"},
+    {id:133,name:"TD Canada Trust",flag:"🇨🇦",country:"Canada",region:"Americas",type:"Commercial",url:"https://www.td.com"},
+    {id:134,name:"BMO — Bank of Montreal",flag:"🇨🇦",country:"Canada",region:"Americas",type:"Commercial",url:"https://www.bmo.com"},
+    {id:135,name:"Scotiabank Canada",flag:"🇨🇦",country:"Canada",region:"Americas",type:"Commercial",url:"https://www.scotiabank.com"},
+    {id:136,name:"Banco do Brasil",flag:"🇧🇷",country:"Brazil",region:"Americas",type:"Government",url:"https://www.bb.com.br"},
+    {id:137,name:"Itaú Unibanco",flag:"🇧🇷",country:"Brazil",region:"Americas",type:"Commercial",url:"https://www.itau.com.br"},
+    {id:138,name:"Bradesco",flag:"🇧🇷",country:"Brazil",region:"Americas",type:"Commercial",url:"https://www.bradesco.com.br"},
+    {id:139,name:"Caixa Econômica Federal Brazil",flag:"🇧🇷",country:"Brazil",region:"Americas",type:"Government",url:"https://www.caixa.gov.br"},
+    {id:140,name:"BBVA Mexico",flag:"🇲🇽",country:"Mexico",region:"Americas",type:"Commercial",url:"https://www.bbva.mx"},
+    {id:141,name:"Banamex — Citibanamex",flag:"🇲🇽",country:"Mexico",region:"Americas",type:"Commercial",url:"https://www.banamex.com"},
+    {id:142,name:"Banco de México — Central Bank",flag:"🇲🇽",country:"Mexico",region:"Americas",type:"Central Bank",url:"https://www.banxico.org.mx"},
+    {id:143,name:"Bancolombia",flag:"🇨🇴",country:"Colombia",region:"Americas",type:"Commercial",url:"https://www.grupobancolombia.com"},
+    {id:144,name:"Banco de Bogotá",flag:"🇨🇴",country:"Colombia",region:"Americas",type:"Commercial",url:"https://www.bancodebogota.com"},
+    {id:145,name:"BancoEstado Chile",flag:"🇨🇱",country:"Chile",region:"Americas",type:"Government",url:"https://www.bancoestado.cl"},
+    {id:146,name:"Banco Nación Argentina",flag:"🇦🇷",country:"Argentina",region:"Americas",type:"Government",url:"https://www.bna.com.ar"},
+    // === AUSTRALIA / OCEANIA ===
+    {id:147,name:"Reserve Bank of Australia",flag:"🇦🇺",country:"Australia",region:"Oceania",type:"Central Bank",url:"https://www.rba.gov.au"},
+    {id:148,name:"CBA — Commonwealth Bank of Australia",flag:"🇦🇺",country:"Australia",region:"Oceania",type:"Commercial",url:"https://www.commbank.com.au"},
+    {id:149,name:"ANZ Bank",flag:"🇦🇺",country:"Australia",region:"Oceania",type:"Commercial",url:"https://www.anz.com.au"},
+    {id:150,name:"NAB — National Australia Bank",flag:"🇦🇺",country:"Australia",region:"Oceania",type:"Commercial",url:"https://www.nab.com.au"},
+    {id:151,name:"Westpac Banking",flag:"🇦🇺",country:"Australia",region:"Oceania",type:"Commercial",url:"https://www.westpac.com.au"},
+    {id:152,name:"Reserve Bank of New Zealand",flag:"🇳🇿",country:"New Zealand",region:"Oceania",type:"Central Bank",url:"https://www.rbnz.govt.nz"},
+    {id:153,name:"ASB Bank New Zealand",flag:"🇳🇿",country:"New Zealand",region:"Oceania",type:"Commercial",url:"https://www.asb.co.nz"},
+    // === GLOBAL / MULTILATERAL ===
+    {id:154,name:"World Bank Group",flag:"🌐",country:"Global",region:"Global",type:"Multilateral",url:"https://www.worldbank.org"},
+    {id:155,name:"IMF — International Monetary Fund",flag:"🌐",country:"Global",region:"Global",type:"Multilateral",url:"https://www.imf.org"},
+    {id:156,name:"ADB — Asian Development Bank",flag:"🌐",country:"Global",region:"Global",type:"Multilateral",url:"https://www.adb.org"},
+    {id:157,name:"AIIB — Asian Infrastructure Investment Bank",flag:"🌐",country:"Global",region:"Global",type:"Multilateral",url:"https://www.aiib.org"},
+    {id:158,name:"African Development Bank",flag:"🌐",country:"Global",region:"Global",type:"Multilateral",url:"https://www.afdb.org"},
+    {id:159,name:"IDB — Inter-American Development Bank",flag:"🌐",country:"Global",region:"Global",type:"Multilateral",url:"https://www.iadb.org"},
+    {id:160,name:"BIS — Bank for International Settlements",flag:"🌐",country:"Global",region:"Global",type:"Multilateral",url:"https://www.bis.org"},
+  ];
+  filteredBanks = [...banksDB];
+}
+
+// ============================================================
+// KNOWLEDGE BASE
+// ============================================================
+const KB = {
+  products: {
+    "savings account": {title:"Savings Account",body:"A deposit account that earns interest while keeping your money safe and accessible. Protected by government deposit insurance (up to local limits). Best for emergency funds and short-term goals."},
+    "checking account": {title:"Checking / Current Account",body:"Designed for daily transactions — bill payments, purchases, transfers. Comes with a debit card. Usually earns little or no interest. Essential for salary crediting and everyday spending."},
+    "current account": {title:"Current Account",body:"Same as checking account — for day-to-day transactions. Common in UK, Asia, Africa. May offer overdraft facilities for businesses."},
+    "fixed deposit": {title:"Fixed / Time Deposit",body:"Place a lump sum for a fixed term (1 month to 5 years) at a higher interest rate than savings. Early withdrawal usually incurs a penalty. Ideal for medium-term savings goals."},
+    "time deposit": {title:"Time Deposit",body:"Same as fixed deposit. Locks in your funds for a set period in exchange for a guaranteed higher interest rate. Low risk, predictable returns."},
+    "personal loan": {title:"Personal Loan",body:"An unsecured loan you repay in monthly installments. No collateral needed. Interest rates are higher than secured loans. Good for medical, education, or travel expenses. Compare Annual Percentage Rates (APR) across banks."},
+    "home loan": {title:"Home Loan / Mortgage",body:"A long-term secured loan (10–30 years) to buy or build property. The property is collateral. Fixed or variable interest rates. Requires proof of income, good credit score, and down payment (typically 10–30%)."},
+    "mortgage": {title:"Mortgage / Home Loan",body:"Secured loan against real estate. Key factors: interest rate type (fixed vs variable), loan-to-value ratio, and monthly amortization. Shop multiple banks before committing."},
+    "credit card": {title:"Credit Card",body:"Revolving credit line. Borrow up to your limit each billing cycle. Pay the full balance to avoid interest (typically 18–36% APR). Offers rewards, cashback, or miles. Never miss minimum payments — it damages your credit score."},
+    "remittance": {title:"Remittance / Money Transfer",body:"Sending money domestically or internationally. Compare: exchange rates, transfer fees, and delivery speed. Major services: Western Union, Wise (TransferWise), Remitly, bank wire transfers. OFW tip: use accredited remittance centers for best rates."},
+    "car loan": {title:"Car / Auto Loan",body:"Secured loan to purchase a vehicle. The car serves as collateral. Typical terms: 1–7 years. Lower interest than personal loans. Requires proof of income and sometimes a down payment of 20–30%."},
+    "business loan": {title:"Business Loan",body:"Financing for entrepreneurs and companies. Types include term loans, lines of credit, equipment financing, and invoice factoring. Requires business registration, financial statements, and often collateral."},
+    "microfinance": {title:"Microfinance / Micro Loan",body:"Small loans for individuals or small businesses without access to traditional banking. Common in the Philippines (SSS, Pag-IBIG, cooperatives), India, and Africa. Lower collateral requirements."},
+    "insurance": {title:"Bank Insurance Products",body:"Banks often sell insurance: life, health, home, and auto. Bancassurance products combine savings with insurance. Always compare with standalone insurance providers for value."},
+    "mutual fund": {title:"Mutual Funds",body:"Pooled investment managed by professionals. Invest in stocks, bonds, or both. Returns are not guaranteed but historically beat savings accounts long-term. Available at most major banks. Check management fees (expense ratio)."},
+    "uitf": {title:"UITF — Unit Investment Trust Fund",body:"Philippine equivalent of a mutual fund, managed by banks. Types: money market, bond, balanced, equity. Low minimum investment (₱5,000–₱50,000). Returns vary with market conditions — not guaranteed."},
+    "stock": {title:"Stock Market / Equities",body:"Buying shares of ownership in companies. Higher risk, higher potential reward than savings. In the Philippines: PSE (Philippine Stock Exchange). Start with blue-chip stocks. Invest only what you can afford to lose."},
+    "forex": {title:"Foreign Exchange (Forex)",body:"Buying and selling currencies. Exchange rates fluctuate daily. Banks offer forex services. For OFWs: lock in favorable rates when possible. Avoid airport exchange counters — rates are usually poor."},
+    "gcash": {title:"GCash / E-Wallet",body:"Philippine mobile wallet by Globe. Send money, pay bills, buy load, invest, get loans, and earn interest on GSave. Insured by PDIC. Requires KYC verification for higher transaction limits."},
+    "maya": {title:"Maya (PayMaya)",body:"Philippine fintech/digital bank. Offers Maya Savings (competitive interest), Maya Credit, QR payments, and crypto. Regulated by BSP. Higher interest rates than traditional banks on savings."},
+    "paynow": {title:"PayNow — Singapore",body:"Singapore's instant fund transfer system linked to NRIC/FIN/mobile number. Free, real-time. Available through all Singapore banks. Part of MAS-regulated payment infrastructure."},
+    "promptpay": {title:"PromptPay — Thailand",body:"Thailand's national instant payment system linked to ID or mobile number. Used for government subsidy disbursement and everyday transfers. Zero or low fees."},
+    "upi": {title:"UPI — Unified Payments Interface (India)",body:"India's real-time payment system. Transfer funds using just a mobile number or VPA (Virtual Payment Address). Free, instant, 24/7. The world's most successful instant payment system by transaction volume."},
+    "paylah": {title:"PayLah! — DBS Singapore",body:"DBS Bank's peer-to-peer payment app in Singapore. Pay friends, merchants, and hawker stalls via QR code. Integrated with DBS digibank."},
+    "wise": {title:"Wise (TransferWise)",body:"International money transfer service offering near mid-market exchange rates with transparent fees. Often cheaper than bank wire transfers. Available in 80+ countries. Not a bank but regulated as a money transfer operator."},
+    "pag-ibig": {title:"Pag-IBIG Fund (Philippines)",body:"Government savings and housing fund for Filipino workers. Mandatory for employed workers. Offers housing loans (5.5% interest), multi-purpose loans, and savings with dividends. Register at pagibigfund.gov.ph."},
+    "sss": {title:"SSS — Social Security System (Philippines)",body:"Philippine social insurance for private sector workers. Provides sickness, maternity, disability, retirement, and death benefits. Also offers salary and calamity loans. Mandatory contribution required."},
+    "philhealth": {title:"PhilHealth (Philippines)",body:"Philippine national health insurance. Covers hospitalization, surgeries, and some outpatient services. Mandatory for employees. Register and update membership at philhealth.gov.ph."},
+  },
+  concepts: {
+    "interest rate": {title:"Interest Rate",body:"Cost of borrowing money (loan rate) or reward for saving (deposit rate). Expressed as Annual Percentage Rate (APR) or Annual Percentage Yield (APY). Higher rates = more expensive loans, more earnings on deposits."},
+    "credit score": {title:"Credit Score",body:"A numerical rating (300–850 in the US; varies by country) measuring your creditworthiness. Higher = better loan terms and lower rates. Factors: payment history (35%), credit utilization (30%), length of history (15%), new credit (10%), credit mix (10%)."},
+    "aml": {title:"AML — Anti-Money Laundering",body:"Laws requiring banks to monitor and report suspicious transactions. Banks must file Suspicious Activity Reports (SARs) and Currency Transaction Reports (CTRs). Customers are subject to enhanced due diligence for large transactions."},
+    "kyc": {title:"KYC — Know Your Customer",body:"Global banking requirement to verify customer identity. Required documents: government-issued ID (passport, driver's license), proof of address (utility bill, bank statement), and sometimes source of funds. Mandatory worldwide by law."},
+    "apy": {title:"APY — Annual Percentage Yield",body:"True annual return on savings, accounting for compound interest. Always compare APY (not just interest rate) when choosing savings accounts. Higher compounding frequency = higher effective APY."},
+    "apr": {title:"APR — Annual Percentage Rate",body:"Total annual cost of borrowing, including interest and fees. Use APR to compare loans — lower APR means cheaper borrowing. Different from interest rate, which excludes fees."},
+    "collateral": {title:"Collateral",body:"Asset pledged to secure a loan. If you default, the bank seizes the collateral. Common collateral: real estate (mortgage), vehicle (auto loan), savings deposits (secured loans). Reduces interest rates significantly."},
+    "overdraft": {title:"Overdraft",body:"When you spend more than your account balance, the bank covers it — up to a limit. Overdraft fees can be very high. Some banks offer overdraft protection linked to a savings account or credit line."},
+    "swift": {title:"SWIFT Code / BIC",body:"Unique identifier for banks in international wire transfers. Format: 8–11 alphanumeric characters (e.g., BDOBPHMM for BDO). Required for receiving international remittances. Get it from your bank or bankswiftcodes.com."},
+    "iban": {title:"IBAN — International Bank Account Number",body:"Standardized account number format for international transfers, used mainly in Europe and the Middle East. Includes country code, check digits, and account number. Not used in the Philippines, USA, or most Asian countries."},
+    "deposit insurance": {title:"Deposit Insurance",body:"Government protection for your bank deposits if a bank fails. Limits: Philippines (PDIC) — ₱500,000; USA (FDIC) — $250,000; Singapore (SDIC) — S$75,000; UK (FSCS) — £85,000. Covers savings, checking, and time deposits."},
+    "pdic": {title:"PDIC — Philippine Deposit Insurance Corp",body:"Philippine government agency insuring bank deposits up to ₱500,000 per depositor per bank. Applies to savings, checking, time deposits, and NOW accounts. Does NOT cover investments like UITFs or mutual funds."},
+    "bsp": {title:"BSP — Bangko Sentral ng Pilipinas",body:"The central bank of the Philippines. Regulates all banks, controls monetary policy, sets interest rates, and manages the Philippine peso. Headquarters: A. Mabini St., Malate, Manila. Website: bsp.gov.ph"},
+    "otc": {title:"OTC — Over-the-Counter Banking",body:"Branch banking where transactions are done in person with a teller. For larger or complex transactions not available via ATM or online banking. Requires valid ID. May involve queuing and processing fees."},
+    "atm": {title:"ATM — Automated Teller Machine",body:"Self-service banking terminal for withdrawals, deposits, balance inquiries, and transfers. Use your bank's own ATM to avoid inter-bank fees. In the Philippines: BancNet and Mastercard networks link most ATMs. Overseas: use Plus/Cirrus networks."},
+    "wire transfer": {title:"Wire Transfer",body:"Direct bank-to-bank electronic transfer of funds. Domestic transfers (e.g., InstaPay, PESONet in PH) are faster and cheaper. International wire transfers require SWIFT code, IBAN, and may take 1–5 business days with fees of $15–$50."},
+    "instapay": {title:"InstaPay (Philippines)",body:"BSP-regulated real-time electronic fund transfer in the Philippines. Available 24/7, limits up to ₱50,000 per transaction. Minimal fees (₱10–₱25). Available via GCash, Maya, and most bank apps."},
+    "pesonet": {title:"PESONet (Philippines)",body:"BSP-regulated batch electronic fund transfer. Higher limits than InstaPay (up to millions). Processed during banking hours, typically 1 business day. Ideal for payroll, supplier payments."},
+    "loan to value": {title:"Loan-to-Value Ratio (LTV)",body:"Percentage of a property's value that a bank will lend. LTV of 80% means you borrow 80% and provide 20% down payment. Lower LTV = less risk for bank = potentially better interest rate."},
+    "amortization": {title:"Amortization",body:"Loan repayment schedule with fixed monthly payments covering both principal and interest. Early payments mostly cover interest; later payments reduce principal more. Use an amortization calculator to plan your loan budget."},
+    "refinancing": {title:"Refinancing",body:"Replacing an existing loan with a new one, usually at a lower interest rate. Can reduce monthly payments or shorten loan term. Beware of prepayment penalties on existing loans and origination fees on new ones."},
+    "fintech": {title:"Fintech — Financial Technology",body:"Technology companies providing financial services. Examples: GCash, Maya, Wise, Revolut, Grab Financial. Often offer higher interest rates, lower fees, and faster onboarding than traditional banks. Usually app-based."},
+  },
+  tips: {
+    "save money": "💡 To save money effectively:\n1. Follow the 50-30-20 rule: 50% needs, 30% wants, 20% savings\n2. Automate transfers to savings on payday\n3. Use high-yield savings accounts or UITFs\n4. Build an emergency fund of 3–6 months of expenses first\n5. Avoid impulse purchases — wait 48 hours before buying",
+    "avoid scam": "🚨 How to avoid bank scams:\n1. Never share OTP, PIN, or password — banks NEVER ask for these\n2. Always type bank URLs directly — don't click email/SMS links\n3. Check the padlock 🔒 and URL spelling before logging in\n4. Enable transaction alerts via SMS and email\n5. Report suspicious messages to your bank immediately\n6. BSP Scam Hotline (PH): 1-800-10-BSP-2020",
+    "build credit": "📈 How to build your credit score:\n1. Pay bills on time — every time\n2. Keep credit card utilization below 30%\n3. Don't apply for multiple loans at once\n4. Maintain old accounts to lengthen credit history\n5. Mix credit types (card + installment loan)\n6. Check your credit report annually for errors",
+    "ofw remittance": "🌍 OFW Remittance Tips:\n1. Compare exchange rates daily — they vary significantly\n2. Use BSP-accredited remittance centers\n3. Wise, Remitly, and GCash Padala often beat bank rates\n4. Avoid remitting on weekends — banks may use less favorable rates\n5. Send larger amounts to reduce per-transaction fees\n6. Inform family to use dedicated OFW bank accounts",
+    "open account": "🏦 How to open a bank account:\n1. Bring 2 valid government IDs\n2. Prepare proof of address (utility bill or lease)\n3. Initial deposit varies: ₱100 (Landbank), ₱500 (BDO), ₱0 (digital banks)\n4. Digital banks (Tonik, Seabank, Maya) open accounts fully online in minutes\n5. For zero-maintaining-balance: try Maya, Seabank, or Tonik in PH",
+    "loan tips": "💳 Smart Loan Tips:\n1. Compare APR, not just interest rate — APR includes all fees\n2. Borrow only what you need and can repay comfortably\n3. Monthly payment should not exceed 30% of your income\n4. Avoid payday/5-6 loans — extremely high effective rates (100%+ APR)\n5. Pre-pay when possible to reduce total interest\n6. Read ALL fine print before signing",
+  },
+  greetings: ["Hello! I'm Bank AI — your guide to official banks worldwide. Ask me about savings, loans, remittance, or tap a bank to open its official website.",
+               "Welcome to Bank AI. I can help with banking questions, find official bank websites, or explain financial products. How can I assist you?",
+               "Hi there! Bank AI is ready. Search for banks by country, or ask about accounts, interest rates, credit scores, and more."],
+  general: {
+    disclaimer: "✅ All bank links go directly to official domains. Always verify the URL in your browser's address bar before entering any credentials.",
+    caution: "⚠️ Safety reminder: Never share your password, PIN, or OTP with anyone — including people claiming to be bank staff. Legitimate banks never ask for this information.",
+    unknown: "I don't have specific information on that, but I can help you search for the official bank website where you can find accurate details. What bank or country are you looking for?"
+  }
+};
+
+// ============================================================
+// APP STATE & LOGIC
+// ============================================================
+let memory = [], learnedPatterns = {};
+let emotionalState = { mood: "neutral" };
+const regions = ["All","Asia","Americas","Europe","Middle East","Africa","Oceania","Global"];
+
+function buildRegionTabs(){
+  const bar = document.getElementById('regionTabs');
+  bar.innerHTML = "";
+  regions.forEach(r => {
+    const tab = document.createElement('div');
+    tab.className = "tab" + (r === activeRegion ? " active" : "");
+    const count = r === "All" ? banksDB.length : banksDB.filter(b => b.region === r).length;
+    tab.textContent = r + " (" + count + ")";
+    tab.addEventListener('click', () => {
+      activeRegion = r;
+      buildRegionTabs();
+      filterByRegion();
+    });
+    bar.appendChild(tab);
+  });
+}
+
+function filterByRegion(){
+  const q = document.getElementById('bankSearch').value.trim().toLowerCase();
+  filteredBanks = banksDB.filter(b => {
+    const matchRegion = activeRegion === "All" || b.region === activeRegion;
+    const matchQuery = !q || b.name.toLowerCase().includes(q) || b.country.toLowerCase().includes(q) || b.url.toLowerCase().includes(q) || b.type.toLowerCase().includes(q);
+    return matchRegion && matchQuery;
+  });
+  renderBankList();
+  updateDebug();
+}
+
+function renderBankList(){
+  const list = document.getElementById('bankList');
+  list.innerHTML = "";
+  if(filteredBanks.length === 0){
+    list.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px;font-size:13px">No banks found. Try a different search.</div>';
+    return;
+  }
+  filteredBanks.forEach(bank => {
+    const el = document.createElement('div');
+    el.className = "bank-item" + (selectedBank && selectedBank.id === bank.id ? " active" : "");
+    el.innerHTML = `<div class="bank-name">${bank.flag} ${bank.name}</div><div class="bank-meta">${bank.country} · ${bank.type}</div><div class="bank-url">${bank.url}</div>`;
+    el.addEventListener('click', () => selectBank(bank));
+    el.addEventListener('dblclick', () => { selectBank(bank); openSelectedBank(); });
+    list.appendChild(el);
+  });
+}
+
+function selectBank(bank){
+  selectedBank = bank;
+  renderBankList();
+  setResult("📌 " + bank.flag + " " + bank.name, "Country: " + bank.country + "\nType: " + bank.type + "\nRegion: " + bank.region + "\nOfficial URL: " + bank.url + "\n\n✅ Verified — tap 🔗 OPEN to launch in a new tab.");
+  speakText("Selected " + bank.name + " — " + bank.country + ".");
+  learnPattern("bank_selected", bank.name);
+}
+
+function searchBanks(query){
+  const q = query.toLowerCase().trim();
+  if(!q){ filteredBanks = activeRegion === "All" ? [...banksDB] : banksDB.filter(b => b.region === activeRegion); }
+  else {
+    filteredBanks = banksDB.filter(b =>
+      (activeRegion === "All" || b.region === activeRegion) &&
+      (b.name.toLowerCase().includes(q) || b.country.toLowerCase().includes(q) || b.url.toLowerCase().includes(q) || b.type.toLowerCase().includes(q) || b.region.toLowerCase().includes(q))
+    );
+  }
+  renderBankList();
+  setStatus("Found " + filteredBanks.length + " banks" + (activeRegion !== "All" ? " in " + activeRegion : ""));
+  updateDebug();
+}
+
+function openSelectedBank(){
+  if(!selectedBank){
+    setResult("⚠️ No Bank Selected","Tap a bank from the list first, then tap OPEN.");
+    speakText("Please select a bank first.");
+    return;
+  }
+  window.open(selectedBank.url, "_blank", "noopener,noreferrer");
+  setResult("✅ Opening: " + selectedBank.name, "Launched: " + selectedBank.url + "\n\n⚠️ Always confirm the address bar shows the correct URL before entering any credentials.");
+  speakText("Opening " + selectedBank.name);
+  learnPattern("bank_opened", selectedBank.name);
+}
+
+function openAllBanks(){
+  if(filteredBanks.length > 10){
+    setResult("⚠️ Too Many Tabs","Filtered list has " + filteredBanks.length + " banks. Please search or filter to 10 or fewer first.");
+    return;
+  }
+  filteredBanks.forEach((bank, idx) => setTimeout(() => window.open(bank.url, "_blank", "noopener,noreferrer"), idx * 300));
+  setResult("🌐 Opening " + filteredBanks.length + " banks","Launching all filtered bank websites in new tabs...");
+  speakText("Opening " + filteredBanks.length + " bank websites.");
+}
+
+function clearAll(){
+  selectedBank = null;
+  activeRegion = "All";
+  filteredBanks = [...banksDB];
+  document.getElementById('bankSearch').value = "";
+  document.getElementById('query').value = "";
+  buildRegionTabs();
+  renderBankList();
+  setResult("Cleared","Ready — all " + banksDB.length + " verified bank websites available.");
+}
+
+// ============================================================
+// QUERY PROCESSING
+// ============================================================
+function processQuery(q){
+  const t = q.toLowerCase().trim();
+  updateEmotionFromQuery(t);
+  learnPattern("query", t);
+
+  // Greetings
+  if(/^(hi|hello|hey|good\s*(morning|afternoon|evening)|mornin|howdy|sup)\b/.test(t)){
+    updateEmotion("warm");
+    return KB.greetings[Math.floor(Math.random() * KB.greetings.length)];
+  }
+
+  // Safety/disclaimer
+  if(/scam|phishing|fraud|fake|safe|legit|trust/.test(t)){
+    updateEmotion("alert");
+    return KB.tips["avoid scam"];
+  }
+
+  // OFW / remittance
+  if(/ofw|remit|send money|abroad|overseas|padala/.test(t)){
+    updateEmotion("warm");
+    return KB.tips["ofw remittance"];
+  }
+
+  // Open account
+  if(/open account|new account|how.*account|account.*open/.test(t)){
+    return KB.tips["open account"];
+  }
+
+  // Loan tips
+  if(/loan tip|smart loan|borrow.*advice|advice.*borrow/.test(t)){
+    return KB.tips["loan tips"];
+  }
+
+  // Save money
+  if(/save money|saving tips|how.*save|tips.*sav/.test(t)){
+    return KB.tips["save money"];
+  }
+
+  // Credit score
+  if(/credit score|build credit|credit history|improve credit/.test(t)){
+    return KB.tips["build credit"];
+  }
+
+  // Knowledge base: products & concepts
+  for(const [key, val] of Object.entries(KB.products)){
+    if(t.includes(key)){
+      updateEmotion("informative");
+      return "💳 " + val.title + "\n\n" + val.body;
+    }
+  }
+  for(const [key, val] of Object.entries(KB.concepts)){
+    if(t.includes(key)){
+      updateEmotion("informative");
+      return "📖 " + val.title + "\n\n" + val.body;
+    }
+  }
+
+  // Disclaimer / caution
+  if(/disclaimer|warning|safe.*banking|security/.test(t)) return KB.general.disclaimer + "\n\n" + KB.general.caution;
+
+  // Thanks
+  if(/thank|thanks|salamat|maraming salamat/.test(t)){ updateEmotion("grateful"); return "You're welcome! 🤝 Anything else I can help with?"; }
+
+  // Open command
+  if(/^(open|launch|go to|visit|load)/.test(t)){ setTimeout(openSelectedBank, 200); return "Opening selected bank..."; }
+
+  // Region filter
+  for(const r of regions.slice(1)){
+    if(t.includes(r.toLowerCase())){
+      activeRegion = r; buildRegionTabs(); filterByRegion();
+      return "Showing " + filteredBanks.length + " verified banks in " + r + ". Tap any bank, then tap 🔗 OPEN.";
+    }
+  }
+
+  // Country/bank name search
+  searchBanks(t);
+  if(filteredBanks.length === 1){
+    selectBank(filteredBanks[0]);
+    return "Found: " + filteredBanks[0].flag + " " + filteredBanks[0].name + " — tap 🔗 OPEN to launch.";
+  }
+  if(filteredBanks.length > 0 && filteredBanks.length <= 10){
+    return filteredBanks.length + " banks found in the list above. Tap any bank, then tap 🔗 OPEN.";
+  }
+  if(filteredBanks.length > 10){
+    return filteredBanks.length + " banks matched. Narrow your search by country name or bank name.";
+  }
+
+  return KB.general.unknown;
+}
+
+// ============================================================
+// UI HELPERS
+// ============================================================
+function updateEmotion(mood){
+  const icons = { neutral:"🤍", warm:"💛", informative:"💚", grateful:"🧡", alert:"⚠️" };
+  emotionalState.mood = mood;
+  document.getElementById("emotionIcon").textContent = icons[mood] || "🤍";
+}
+
+function updateEmotionFromQuery(text){
+  if(/thank|happy|great|good|love/.test(text)) updateEmotion("grateful");
+  else if(/help|please|how|what|explain/.test(text)) updateEmotion("informative");
+  else if(/scam|fraud|hack|stolen|danger/.test(text)) updateEmotion("alert");
+  else updateEmotion("neutral");
+}
+
+function speakText(text){
+  if(!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text.replace(/[^\w\s.,!?'-]/g, ' '));
+  u.rate = 0.92; u.pitch = 1.0; u.volume = 1;
+  window.speechSynthesis.speak(u);
+}
+
+function setStatus(t){ document.getElementById('statusText').textContent = t; }
+
+function setResult(title, msg){
+  document.getElementById('resultTitle').textContent = title;
+  document.getElementById('resultText').textContent = msg;
+}
+
+function updateDebug(){
+  document.getElementById('debugInfo').textContent =
+    "Banks: " + filteredBanks.length + "/" + banksDB.length +
+    " | Filter: " + activeRegion +
+    " | Mood: " + emotionalState.mood;
+}
+
+function learnPattern(pattern, value){
+  if(!learnedPatterns[pattern]) learnedPatterns[pattern] = [];
+  learnedPatterns[pattern].push({v: value, t: Date.now()});
+}
+
+function sendQuery(){
+  const q = document.getElementById('query').value.trim();
+  if(!q) return;
+  document.getElementById('query').value = "";
+  memory.push({ q, t: Date.now() });
+  if(memory.length > 500) memory.shift();
+  const reply = processQuery(q);
+  setResult("💬 Response", reply);
+  speakText(reply);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+function initAll(){
+  setStatus("Loading bank directory...");
+  buildBanksDatabase();
+  buildRegionTabs();
+  renderBankList();
+  document.getElementById('bankCount').textContent = banksDB.length + " verified banks";
+  setStatus("✅ Ready — " + banksDB.length + " official bank sites loaded");
+  updateDebug();
+}
+
+// Event Listeners
+document.getElementById('sendOtpBtn').addEventListener('click', sendOTP);
+document.getElementById('verifyOtpBtn').addEventListener('click', verifyOTP);
+document.getElementById('resendOtpBtn').addEventListener('click', resendOTP);
+document.getElementById('logoutBtn').addEventListener('click', logout);
+document.getElementById('bankSearch').addEventListener('input', e => searchBanks(e.target.value));
+document.getElementById('btnOpen').addEventListener('click', openSelectedBank);
+document.getElementById('btnAll').addEventListener('click', openAllBanks);
+document.getElementById('btnClear').addEventListener('click', clearAll);
+document.getElementById('sendBtn').addEventListener('click', sendQuery);
+document.getElementById('query').addEventListener('keydown', e => { if(e.key === 'Enter') sendQuery(); });
+document.getElementById('loginPassword').addEventListener('keydown', e => { if(e.key === 'Enter') sendOTP(); });
+
+document.addEventListener('DOMContentLoaded', () => { checkSavedSession(); });
+</script>
+</body>
+</html>
